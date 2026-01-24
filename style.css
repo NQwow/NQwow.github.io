@@ -1,0 +1,127 @@
+:root{
+    --bg: #fdfdfd;
+    --fg: #111827;
+    --muted: #6b7280;
+    --accent: #d3bafe;
+    --card: #ffdcf9;
+}
+
+body{
+    font-family:Inter,system-ui;
+    line-height: 1.5;
+    background-color: var(--bg);
+    color: var(--fg);
+    margin: 0;
+}
+
+.container{
+    max-width: 900px;
+    margin:  0 auto;
+    padding: 1rem;
+}
+
+.site-header{
+    border-bottom: 1px solid #e6e9ee;
+    padding: 0.1rem;
+}
+
+.site-header > .container {
+    max-width: auto;
+    display: flex;
+    align-items: center;
+    max-width: none;
+    margin: 0;
+    padding: 0 2rem;
+    justify-content: space-between;
+}
+
+.brand{
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.avatar{
+    width: 56px;
+    height: 56px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.muted{
+    color: var(--muted);
+    margin: 0;
+}
+
+.site-header > .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+}
+
+.main{
+    padding: 2rem 0;
+}
+
+.hero{
+    padding: 2rem;
+    background: linear-gradient(90deg, rgba(211,186,254,0.06), transparent);
+    border-radius: 8px;
+}
+
+.cards{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.card{
+    background: var(--card);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e6eef8;
+}
+
+.btn{
+    background: var(--accent);
+    color: #fff;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.site-footer{
+    border-top: 1px solid #e6e9ee;
+    padding: 1rem 0;
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--muted);
+}
+
+body.dark{
+    --bg: #1f2937;
+    --fg: #e6eef8;
+    --muted: #9aa6b2;
+    --accent: #9691ad;
+    --card: #3b313a;
+}
+
+@media (max-width: 600px){
+    .container{
+        padding: 0.75rem;
+    }
+    .avatar{
+        width: 48px;
+        height: 48px;
+    }
+}
+
