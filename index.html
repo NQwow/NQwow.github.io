@@ -73,6 +73,15 @@ body{
 #scene-opening .dialogue{font-size:clamp(1rem,2.5vw,1.3rem);max-width:500px;line-height:2;color:var(--ink-light);opacity:0;animation:fadeIn 1s ease 0.3s forwards;}
 #scene-opening .hint{font-size:0.85rem;color:var(--ink-fade);opacity:0;animation:pulse 2s ease 2s infinite;margin-top:20px;}
 
+/* ========== 预加载 ========== */
+#scene-loading{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1000;
+  background:radial-gradient(ellipse at center,var(--paper) 0%,var(--paper-dark) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+#scene-loading .load-title{font-size:1.5rem;letter-spacing:0.2em;color:var(--ink);}
+#scene-loading .load-bar-outer{width:clamp(200px,50vw,300px);height:4px;border:1px solid var(--ink-fade);border-radius:2px;overflow:hidden;}
+#scene-loading .load-bar-inner{height:100%;background:var(--ink);width:0%;transition:width 0.3s;}
+#scene-loading .load-text{font-size:0.85rem;color:var(--ink-light);}
+
 /* ========== 房间 ========== */
 #scene-room{overflow:hidden;}
 #scene-room .room-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:url('img/背景.png') center/cover no-repeat;}
@@ -263,8 +272,15 @@ body{
 </head>
 <body>
 
+<!-- ==================== 预加载 ==================== -->
+<div id="scene-loading">
+  <div class="load-title">走 马 寻 光</div>
+  <div class="load-bar-outer"><div class="load-bar-inner" id="load-bar"></div></div>
+  <div class="load-text" id="load-text">正在调频…</div>
+</div>
+
 <!-- ==================== 开场 ==================== -->
-<div id="scene-opening" class="scene active">
+<div id="scene-opening" class="scene">
   <div class="title">走 马 寻 光</div>
   <div class="dialogue">
     <p>"曾经拥有的东西失去了，并不代表会回到原来没有那种东西的时候"</p>
@@ -1455,13 +1471,43 @@ document.querySelectorAll('#scene-room .room-object').forEach(obj=>{
 $('scene-opening').addEventListener('click',()=>{ showScene($('scene-disclaimer')); });
 $('scene-disclaimer').addEventListener('click',()=>{ showScene(dom.room); });
 
-/* ==================== 初始化 ==================== */
-function init() {
-  AudioEngine.init();
-  initKnobs();
-}
-init();
-console.log('《走马寻光》—— 已就绪。戴上耳机体验更佳。');
+/* ==================== 预加载 & 初始化 ==================== */
+const PRELOAD_IMAGES = [
+  'img/背景.png',
+  'img/收音机.png',
+  'img/老手机抠.png',
+  'img/新手机抠.png',
+  'img/笔记本抠.png'
+];
+
+(function preloadAndInit() {
+  var loaded = 0;
+  var total = PRELOAD_IMAGES.length;
+  var bar = document.getElementById('load-bar');
+  var text = document.getElementById('load-text');
+
+  function updateProgress(n) {
+    loaded = n;
+    var pct = Math.round(loaded / total * 100);
+    bar.style.width = pct + '%';
+    text.textContent = '正在调频… ' + loaded + '/' + total;
+  }
+
+  function finish() {
+    document.getElementById('scene-loading').style.display = 'none';
+    document.getElementById('scene-opening').classList.add('active');
+    AudioEngine.init();
+    initKnobs();
+    console.log('《走马寻光》—— 已就绪。戴上耳机体验更佳。');
+  }
+
+  PRELOAD_IMAGES.forEach(function(src) {
+    var img = new Image();
+    img.onload = function() { updateProgress(loaded + 1); if (loaded >= total) finish(); };
+    img.onerror = function() { updateProgress(loaded + 1); if (loaded >= total) finish(); };
+    img.src = src;
+  });
+})();
 </script>
 </body>
 </html>
