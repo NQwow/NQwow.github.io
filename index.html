@@ -584,7 +584,7 @@ const ENDING_DIALOGUE = [
 
 const ENDING_DATA = {
   good: {
-    text:'<br>李寻光生前修复了1379段声。<br>每段声音他都认真听过<br>没有声音会回头听一听他<br>但你听见了<br>这大概就是回声',
+    text:'<br>李寻光生前修复了1379段声音<br>每段声音他都认真听过<br>没有声音会回头听一听他<br>但你听见了<br>这大概就是回声',
     line:'他在磁带里喊的那句话被回声谷忘记，今天有人听见了',
     question:'你相信被忘记的声音，总有一天会被重新听见吗？',
     opts:['我相信','我希望如此']
@@ -1480,17 +1480,24 @@ const PRELOAD_IMAGES = [
   'img/笔记本抠.png'
 ];
 
+const PRELOAD_AUDIO = [
+  'goodmusic/杂音.mp3',
+  'goodmusic/93 87.6 笑话.mp3',
+  'goodmusic/07 87.6 运动解说.mp3',
+  'goodmusic/26 88.3 旅行.mp3'
+];
+
 (function preloadAndInit() {
   var loaded = 0;
-  var total = PRELOAD_IMAGES.length;
+  var imgTotal = PRELOAD_IMAGES.length;
   var bar = document.getElementById('load-bar');
   var text = document.getElementById('load-text');
 
   function updateProgress(n) {
     loaded = n;
-    var pct = Math.round(loaded / total * 100);
+    var pct = Math.round(loaded / imgTotal * 100);
     bar.style.width = pct + '%';
-    text.textContent = '正在调频… ' + loaded + '/' + total;
+    text.textContent = '正在调频… ' + loaded + '/' + imgTotal;
   }
 
   function finish() {
@@ -1501,11 +1508,17 @@ const PRELOAD_IMAGES = [
     console.log('《走马寻光》—— 已就绪。戴上耳机体验更佳。');
   }
 
+  // 图片到齐就进场，不卡界面
   PRELOAD_IMAGES.forEach(function(src) {
     var img = new Image();
-    img.onload = function() { updateProgress(loaded + 1); if (loaded >= total) finish(); };
-    img.onerror = function() { updateProgress(loaded + 1); if (loaded >= total) finish(); };
+    img.onload  = function() { updateProgress(loaded + 1); if (loaded >= imgTotal) finish(); };
+    img.onerror = function() { updateProgress(loaded + 1); if (loaded >= imgTotal) finish(); };
     img.src = src;
+  });
+
+  // 音频后台静默加载，不阻塞
+  PRELOAD_AUDIO.forEach(function(src) {
+    fetch(src).then(function(r) { return r.blob(); }).catch(function(){});
   });
 })();
 </script>
