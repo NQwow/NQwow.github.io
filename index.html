@@ -1,61 +1,1467 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>little project</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>走马寻光</title>
+<style>
+/* ========== CSS变量 ========== */
+:root {
+  --paper: #f5f0e8;
+  --paper-dark: #e8e0d0;
+  --ink: #2c2416;
+  --ink-light: #5c5446;
+  --ink-fade: #8c8476;
+  --shadow: rgba(44,36,22,0.15);
+  --font-hand: 'KaiTi','STKaiti','华文楷体','FangSong','仿宋',cursive,serif;
+  --font-ui: 'KaiTi','STKaiti','华文楷体',serif;
+  --radius: 4px;
+}
+
+/* ========== 基础 ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font-ui);color:var(--ink);background:#1a1a1a;}
+body{
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.01) 2px,rgba(0,0,0,0.01) 4px),
+    radial-gradient(ellipse at 30% 20%, rgba(200,180,150,0.3) 0%, transparent 60%),
+    var(--paper);
+}
+
+/* ========== 场景管理 ========== */
+.scene{display:none;position:absolute;top:0;left:0;width:100%;height:100%;}
+.scene.active{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;
+  background:rgba(0,0,0,0.7);display:none;flex-direction:column;align-items:center;justify-content:center;}
+.overlay.active{display:flex;}
+.overlay-content{
+  background:var(--paper);
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.01) 2px,rgba(0,0,0,0.01) 4px);
+  border:2px solid var(--ink);
+  border-radius:8px;
+  box-shadow:4px 4px 20px var(--shadow),inset 0 0 60px rgba(0,0,0,0.03);
+  position:relative;max-width:95vw;max-height:90vh;overflow-y:auto;
+  animation:fadeInUp 0.4s ease;
+}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+/* ========== 按钮 ========== */
+.btn{
+  display:inline-block;padding:10px 24px;border:2px solid var(--ink);border-radius:var(--radius);
+  background:var(--paper);color:var(--ink);cursor:pointer;font-family:var(--font-ui);font-size:1rem;
+  transition:all 0.2s;text-align:center;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+.btn:hover{background:var(--ink);color:var(--paper);}
+.btn:active{transform:scale(0.96);}
+.btn-back{
+  position:absolute;top:12px;left:12px;width:40px;height:40px;border:2px solid var(--ink);
+  border-radius:50%;background:var(--paper);cursor:pointer;font-size:1.3rem;line-height:36px;
+  text-align:center;z-index:999;transition:all 0.2s;display:flex;align-items:center;justify-content:center;
+}
+.btn-back:hover{background:var(--ink);color:var(--paper);}
+
+/* ========== 开场 ========== */
+#scene-opening{
+  background:radial-gradient(ellipse at center,var(--paper) 0%,var(--paper-dark) 100%);
+  cursor:pointer;flex-direction:column;gap:24px;text-align:center;padding:40px;
+}
+#scene-opening.active{display:flex;}
+#scene-opening .title{font-size:clamp(2rem,5vw,3.5rem);letter-spacing:0.3em;color:var(--ink);text-shadow:2px 2px 0 var(--shadow);}
+#scene-opening .dialogue{font-size:clamp(1rem,2.5vw,1.3rem);max-width:500px;line-height:2;color:var(--ink-light);opacity:0;animation:fadeIn 1s ease 0.3s forwards;}
+#scene-opening .hint{font-size:0.85rem;color:var(--ink-fade);opacity:0;animation:pulse 2s ease 2s infinite;margin-top:20px;}
+
+/* ========== 房间 ========== */
+#scene-room{overflow:hidden;}
+#scene-room .room-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:url('img/背景.png') center/cover no-repeat;}
+.room-object{position:absolute;cursor:pointer;transition:transform 0.25s,filter 0.25s;-webkit-tap-highlight-color:transparent;z-index:5;}
+.room-object:hover{transform:scale(1.08);filter:brightness(1.1);}
+.room-object:active{transform:scale(0.95);}
+.room-object img{width:100%;height:100%;object-fit:contain;pointer-events:none;}
+/* 书桌透视排列：收音机 → 老式手机 → 智能手机 → 笔记本电脑 */
+/* bottom% 锚定桌面（值越大越靠上），left% 横向排列，前三件紧凑、笔记本拉开 */
+#obj-radio{bottom:30%;left:7%;width:clamp(90px,16vmin,160px);z-index:5;}
+#obj-oldphone{bottom:30.3%;left:16%;width:clamp(70px,12vmin,115px);z-index:5;}
+#obj-smartphone{bottom:30.6%;left:25%;width:clamp(60px,10vmin,95px);z-index:5;transform:rotate(90deg) scaleX(-1);}
+#obj-smartphone:hover{transform:rotate(90deg) scaleX(-1) scale(1.08);}
+#obj-smartphone:active{transform:rotate(90deg) scaleX(-1) scale(0.95);}
+#obj-laptop{bottom:34%;left:40%;width:clamp(160px,26vmin,280px);z-index:6;}
+#obj-laptop:hover{transform:scale(1.06);}
+#obj-laptop:active{transform:scale(0.95);}
+#obj-door{top:15%;left:4%;width:clamp(55px,9vmin,110px);height:clamp(90px,24vmin,250px);background:transparent;border:2px dashed transparent;border-radius:4px;z-index:4;}
+#obj-door:hover{border-color:var(--ink-fade);}
+#obj-door.door-ready{border-color:var(--ink);animation:pulse 1.5s ease infinite;}
+/* ========== 音频播放界面 ========== */
+.audio-player{width:clamp(340px,92vw,540px);padding:16px 20px 24px;max-height:92vh;}
+.audio-tabs{display:flex;gap:4px;justify-content:center;margin-bottom:10px;border-bottom:2px solid var(--ink);padding-bottom:8px;}
+.audio-tab{padding:4px 10px;cursor:pointer;border:2px solid transparent;border-radius:var(--radius);transition:all 0.2s;-webkit-tap-highlight-color:transparent;opacity:0.5;}
+.audio-tab:hover{opacity:0.8;}
+.audio-tab.active{opacity:1;border-color:var(--ink);background:rgba(0,0,0,0.04);}
+.audio-tab img{width:clamp(28px,5vmin,40px);height:clamp(28px,5vmin,40px);object-fit:contain;display:block;margin:0 auto;}
+.audio-tab span{display:block;font-size:0.7rem;color:var(--ink-light);margin-top:2px;text-align:center;}
+.audio-tab[data-year="26"] img{transform:scaleX(-1);}
+.freq-display{text-align:center;margin:8px 0;}
+.freq-display .freq-label{font-size:0.8rem;color:var(--ink-fade);}
+.freq-display .freq-value{font-size:clamp(2.2rem,5vw,3rem);font-family:var(--font-hand);font-weight:bold;letter-spacing:0.05em;}
+.freq-display .freq-status{font-size:0.85rem;color:var(--ink-light);margin-top:2px;min-height:1.2em;}
+/* 音频文字内容 */
+.audio-text-box{margin:8px 0;padding:10px 14px;background:rgba(0,0,0,0.03);border-radius:var(--radius);font-size:0.85rem;line-height:1.7;color:var(--ink);max-height:120px;overflow-y:auto;border:1px dashed var(--ink-fade);min-height:40px;}
+.audio-text-box .text-label{font-size:0.75rem;color:var(--ink-fade);margin-bottom:2px;}
+.audio-text-box .text-content{color:var(--ink);}
+
+/* 调频区 */
+.tuning-area{display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 0 10px;flex-wrap:wrap;}
+/* 旋钮 */
+.knob-container{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.knob-outer{width:clamp(70px,16vmin,110px);height:clamp(70px,16vmin,110px);border-radius:50%;border:3px solid var(--ink);background:radial-gradient(circle at 40% 35%,#f8f4ec,#d4c8b0);position:relative;cursor:grab;box-shadow:2px 3px 8px var(--shadow),inset 0 2px 4px rgba(255,255,255,0.5);-webkit-tap-highlight-color:transparent;user-select:none;}
+.knob-outer:active{cursor:grabbing;}
+.knob-indicator{position:absolute;top:10%;left:50%;transform:translateX(-50%);width:3px;height:40%;background:var(--ink);border-radius:2px;}
+.knob-dot{position:absolute;top:50%;left:50%;width:10px;height:10px;background:var(--ink);border-radius:50%;transform:translate(-50%,-50%);}
+.knob-arrow{display:flex;gap:12px;margin-top:2px;}
+.knob-arrow span{width:32px;height:32px;border:2px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.knob-arrow span:hover{background:var(--ink);color:var(--paper);}
+
+/* 按键加减 */
+.btn-tuning{display:flex;flex-direction:column;gap:8px;align-items:center;}
+.btn-tuning button{width:46px;height:46px;border:2px solid var(--ink);border-radius:50%;background:var(--paper);font-size:1.4rem;cursor:pointer;font-family:var(--font-ui);transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.btn-tuning button:hover{background:var(--ink);color:var(--paper);}
+
+/* 数字键盘（老式手机） */
+.num-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:180px;}
+.num-keypad button{width:100%;aspect-ratio:1.4;border:2px solid var(--ink);border-radius:var(--radius);background:var(--paper);font-size:1.1rem;cursor:pointer;font-family:var(--font-ui);transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.num-keypad button:hover{background:var(--ink);color:var(--paper);}
+
+/* 直接输入 */
+.freq-input-row{display:flex;gap:6px;align-items:center;}
+.freq-input-row input{width:100px;padding:8px 10px;border:2px solid var(--ink);border-radius:var(--radius);background:var(--paper);font-family:var(--font-ui);font-size:1rem;text-align:center;}
+
+/* 自动寻台 */
+.auto-seek-btn{padding:6px 16px;border:2px solid var(--ink);border-radius:20px;background:var(--paper);cursor:pointer;font-size:0.85rem;font-family:var(--font-ui);transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.auto-seek-btn:hover{background:var(--ink);color:var(--paper);}
+.auto-seek-btn.seeking{background:var(--ink);color:var(--paper);animation:pulse 0.6s ease infinite;}
+
+/* 播放控制 */
+.play-controls{display:flex;justify-content:center;gap:10px;margin-top:8px;}
+.play-btn{width:40px;height:40px;border:2px solid var(--ink);border-radius:50%;cursor:pointer;background:var(--paper);font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.play-btn:hover{background:var(--ink);color:var(--paper);}
+
+/* ========== 笔记本电脑 ========== */
+.laptop-screen{width:clamp(340px,92vw,600px);padding:16px 20px 20px;min-height:380px;}
+.laptop-topbar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--ink-fade);min-height:20px;}
+.laptop-desktop{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px 0;flex-wrap:wrap;}
+.desktop-icon{display:flex;flex-direction:row;align-items:center;gap:8px;cursor:pointer;padding:12px 14px;border-radius:var(--radius);transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.desktop-icon:hover{background:rgba(0,0,0,0.05);}
+.desktop-icon .icon-img{width:clamp(50px,10vmin,70px);height:clamp(50px,10vmin,70px);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:clamp(1.5rem,3vmin,2rem);background:var(--paper-dark);}
+.desktop-icon .icon-label{font-size:0.9rem;color:var(--ink);}
+
+/* 应用面板 */
+.app-panel{display:none;flex-direction:column;}
+.app-panel.active{display:flex;}
+.app-panel h3{text-align:center;margin-bottom:10px;font-size:1.05rem;}
+
+/* 便签 */
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+.note-card{padding:10px;border:1px solid var(--ink-fade);background:linear-gradient(175deg,#fdf8ef,#f5edd8);cursor:pointer;font-size:0.85rem;transition:all 0.2s;position:relative;min-height:75px;box-shadow:1px 2px 4px var(--shadow);}
+.note-card:hover{transform:translateY(-2px);box-shadow:2px 4px 8px var(--shadow);}
+.note-card.locked .note-preview{color:var(--ink-fade);font-style:italic;}
+.note-card .note-title{font-weight:bold;margin-bottom:2px;font-size:0.9rem;}
+.note-card .note-preview{color:var(--ink-light);font-size:0.8rem;}
+
+/* 密码弹窗 */
+.pw-dialog{position:fixed;top:0;left:0;width:100%;height:100%;z-index:200;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;}
+.pw-dialog.active{display:flex;}
+.pw-dialog .pw-box{background:var(--paper);border:2px solid var(--ink);border-radius:8px;padding:20px 24px;text-align:center;max-width:320px;width:90%;}
+.pw-dialog input{width:100%;padding:10px;border:2px solid var(--ink);border-radius:var(--radius);font-family:var(--font-ui);font-size:1rem;margin:8px 0;text-align:center;}
+.pw-dialog .pw-error{color:#a33;font-size:0.85rem;margin-bottom:4px;min-height:1.2em;}
+.pw-dialog .pw-hint{color:var(--ink-fade);font-size:0.8rem;margin-bottom:6px;}
+
+/* 打卡 */
+.checkin-popup{text-align:center;padding:16px;}
+.checkin-popup input{width:160px;padding:8px;border:2px solid var(--ink);text-align:center;font-family:var(--font-ui);font-size:1rem;margin:6px 0;}
+
+/* 短信 */
+.sms-list{display:flex;flex-direction:column;gap:6px;}
+.sms-item{padding:10px 14px;background:rgba(0,0,0,0.03);border-radius:var(--radius);font-size:0.85rem;border-left:3px solid var(--ink-fade);}
+.sms-item .sms-from{font-weight:bold;font-size:0.8rem;color:var(--ink-light);}
+.sms-item .sms-time{font-size:0.75rem;color:var(--ink-fade);}
+.sms-item .sms-body{margin-top:3px;}
+.sms-star-btn{display:inline-block;margin:8px 0;cursor:pointer;font-size:0.95rem;color:var(--ink);transition:all 0.2s;padding:6px 16px;border:2px solid var(--ink);border-radius:var(--radius);background:rgba(200,170,100,0.2);font-weight:bold;}
+.sms-star-btn:hover{background:var(--ink);color:var(--paper);}
+
+/* 日记 */
+.diary-lock{text-align:center;padding:24px;}
+.diary-lock h3{margin-bottom:12px;}
+.diary-lock .forgot-link{color:var(--ink-fade);cursor:pointer;font-size:0.85rem;margin-top:14px;text-decoration:underline;}
+.diary-lock .forgot-link:hover{color:var(--ink);}
+.diary-questions{text-align:left;max-width:400px;margin:0 auto;}
+.diary-questions .q-item{margin-bottom:12px;}
+.diary-questions .q-item label{display:block;font-size:0.9rem;margin-bottom:3px;font-weight:bold;}
+.diary-questions .q-item input{width:100%;padding:8px;border:2px solid var(--ink);border-radius:var(--radius);font-family:var(--font-ui);}
+.diary-entries{max-height:280px;overflow-y:auto;padding:0 6px;}
+.diary-entry{padding:8px 0;border-bottom:1px dashed var(--ink-fade);font-size:0.9rem;line-height:1.6;}
+.diary-entry .entry-date{font-weight:bold;color:var(--ink);}
+.diary-hint{margin-top:12px;padding:10px;background:rgba(0,0,0,0.03);border-radius:var(--radius);font-style:italic;font-size:0.85rem;color:var(--ink-light);text-align:center;border:1px dashed var(--ink-fade);}
+
+/* ========== 门解锁 ========== */
+.door-unlock{width:clamp(300px,90vw,460px);padding:16px 20px 24px;text-align:center;}
+.door-unlock .unlock-step{font-size:0.85rem;color:var(--ink-light);margin-bottom:2px;}
+.door-unlock .unlock-hint{font-size:0.8rem;color:var(--ink-fade);margin:6px 0;font-style:italic;}
+.door-unlock .locked-freqs{display:flex;gap:10px;justify-content:center;margin:8px 0;}
+.door-unlock .locked-freq{width:64px;height:34px;border:1px solid var(--ink-fade);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-family:var(--font-hand);font-size:1rem;color:var(--ink-fade);}
+.door-unlock .locked-freq.filled{color:var(--ink);border-color:var(--ink);font-weight:bold;background:rgba(0,0,0,0.03);}
+.door-unlock .door-error{color:#a33;font-size:0.85rem;margin:6px 0;min-height:1.2em;}
+
+/* ========== 最终空间 ========== */
+#scene-final{background:var(--paper);background-image:radial-gradient(ellipse at center,var(--paper) 40%,#e8e0d0 100%);}
+#scene-final .final-space{cursor:pointer;text-align:center;padding:40px;}
+#scene-final .final-space p{font-size:1.2rem;color:var(--ink-light);margin-bottom:10px;}
+#scene-final .final-space .click-hint{font-size:0.85rem;color:var(--ink-fade);animation:pulse 2s ease infinite;}
+
+/* ========== 最终对话 ========== */
+.dialogue-panel{width:clamp(320px,90vw,560px);padding:20px 24px;}
+.dialogue-panel .voice-text{font-size:1.05rem;line-height:1.8;margin-bottom:16px;color:var(--ink);font-style:italic;text-align:center;}
+.dialogue-panel .options{display:flex;flex-direction:column;gap:8px;}
+.dialogue-panel .option-btn{padding:12px 18px;border:2px solid var(--ink);border-radius:var(--radius);background:var(--paper);cursor:pointer;font-family:var(--font-ui);font-size:0.95rem;text-align:left;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.dialogue-panel .option-btn:hover{background:var(--ink);color:var(--paper);}
+
+/* ========== 结局 ========== */
+.ending-scene{width:clamp(320px,90vw,560px);padding:24px 20px;text-align:center;}
+.ending-scene .ending-text{font-size:1rem;line-height:2;margin-bottom:16px;color:var(--ink);}
+.ending-scene .ending-line{font-size:1.1rem;font-weight:bold;margin:14px 0;color:var(--ink);}
+.ending-scene .ending-question{font-size:0.95rem;color:var(--ink-light);margin:16px 0 10px;}
+.ending-scene .ending-options{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+/* ========== 共享收尾 ========== */
+.epilogue-scene{width:clamp(300px,90vw,500px);padding:24px 20px;text-align:center;}
+.epilogue-scene .epi-freq{font-size:2rem;font-family:var(--font-hand);font-weight:bold;margin:10px 0;}
+.epilogue-scene .epi-text{font-size:0.95rem;line-height:1.8;color:var(--ink);margin:6px 0;}
+.epilogue-scene .song-choice{font-size:1.1rem;cursor:pointer;padding:10px 24px;border:2px solid var(--ink);border-radius:var(--radius);display:inline-block;margin-top:8px;transition:all 0.2s;}
+.epilogue-scene .song-choice:hover{background:var(--ink);color:var(--paper);}
+
+/* ========== 黑屏 ========== */
+#scene-blackout{position:fixed;top:0;left:0;width:100%;height:100%;z-index:999;background:#000;display:none;align-items:center;justify-content:center;color:#555;font-size:1rem;}
+#restart-btn{background:transparent;color:#444;border-color:#444;transition:all 0.8s;}
+#restart-btn:hover{background:#222;color:#888;border-color:#666;}
+
+/* ========== 响应式 ========== */
+@media (max-width:900px){
+  .audio-player,.laptop-screen,.door-unlock,.dialogue-panel{padding:12px 14px 16px;}
+  .notes-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));}
+}
+@media (max-width:600px){
+  #obj-radio{width:24vmin;bottom:30%;left:3%;}
+  #obj-oldphone{width:18vmin;bottom:30.3%;left:26%;}
+  #obj-smartphone{width:15vmin;bottom:30.6%;left:44%;}
+  #obj-laptop{width:38vmin;bottom:34%;left:52%;}
+  #obj-door{width:16vmin;height:22vmin;top:18%;left:2%;}
+  .room-object{min-width:44px;min-height:44px;}
+  .audio-tab img{width:24px;height:24px;}
+}
+</style>
 </head>
 <body>
-    <header class="site-header">
-        <div class="container">
-            <div class="brand">
-                <div class="avatar">HELLO</div>
-                <div>
-                    <h1>little project</h1>
-                    <p class="muted">emmm.try my best---NQwow</p>
-                </div>
-            </div>
-            <button id="Change Theme" class="btn">Change Theme</button>
-        </div>
-    </header>
 
-    <main class="container main">
-        <section class="hero">
-            <h2>Welcome to little project</h2>
-            <p>I am trying my best to make this project better. Hope you like it!</p>
-            <p><a class="btn" href="#hey">Nothing in here</a></p>
-        </section>
+<!-- ==================== 开场 ==================== -->
+<div id="scene-opening" class="scene active">
+  <div class="title">走 马 寻 光</div>
+  <div class="dialogue">
+    <p>"曾经拥有的东西失去了，并不代表会回到原来没有那种东西的时候"</p>
+    <p style="margin-top:8px;">------NQwow制作-------</p>
+  </div>
+  <div class="hint">— 点击任意位置开始 —</div>
+</div>
 
-        <section id="about">
-            <h3>About Me</h3>
-            <p>Now,I don't know what to write here.</p>
-        </section>
+<!-- ==================== 免责声明 ==================== -->
+<div id="scene-disclaimer" class="scene">
+  <div class="dialogue" style="opacity:1;animation:none;text-align:center;padding:40px;">
+    <p style="font-size:1rem;line-height:2;color:var(--ink-light);max-width:480px;">
+      作品中含有AI生成的音频和图像，<br>BGM由剪映提供剪辑，不做商业使用。
+    </p>
+  </div>
+  <div class="hint">— 点击继续 —</div>
+</div>
 
-        <section id="projects">
-            <h3>Projects</h3>
-            <div class="cards">
-                <article class="card">
-                    <h4>An unnamed card</h4>
-                    <p>Maybe there need some word?</p>
-                </article>
-                <article class="card">
-                    <h4>Card two</h4>
-                    <p>QWQ  ^-^</p>
-                </article>
-            </div>
-        </section>
+<!-- ==================== 房间 ==================== -->
+<div id="scene-room" class="scene">
+  <div class="room-bg"></div>
+  <div id="obj-radio" class="room-object" data-object="radio"><img src="img/收音机.png" alt="收音机"></div>
+  <div id="obj-oldphone" class="room-object" data-object="oldphone"><img src="img/老手机抠.png" alt="老式手机"></div>
+  <div id="obj-smartphone" class="room-object" data-object="smartphone"><img src="img/新手机抠.png" alt="智能手机"></div>
+  <div id="obj-laptop" class="room-object" data-object="laptop"><img src="img/笔记本抠.png" alt="笔记本电脑"></div>
+  <div id="obj-door" class="room-object" data-object="door"></div>
+</div>
 
-        <section id="contact">
-            <h3>Contact Me</h3>
-            <p>Email: <a href="mailto:nqwei1017@163.com">nqwei1017@163.com</a></p>
-        </section>
-    </main>
+<!-- ==================== 音频播放覆盖层 ==================== -->
+<div id="overlay-audio" class="overlay">
+  <div class="overlay-content audio-player" id="audio-player-content">
+    <div class="btn-back" id="audio-back">←</div>
+    <div class="audio-tabs">
+      <div class="audio-tab active" data-year="93"><img src="img/收音机.png" alt="1993"><span>1993</span></div>
+      <div class="audio-tab" data-year="07"><img src="img/老手机抠.png" alt="2007"><span>2007</span></div>
+      <div class="audio-tab" data-year="26"><img src="img/新手机抠.png" alt="2026"><span>2026</span></div>
+    </div>
+    <div class="freq-display">
+      <div class="freq-label">FM</div>
+      <div class="freq-value" id="audio-freq-display">88.3</div>
+      <div class="freq-status" id="audio-status">—</div>
+    </div>
+    <div class="audio-text-box" id="audio-text-box">
+      <div class="text-label">频道内容</div>
+      <div class="text-content" id="audio-text-content">—</div>
+    </div>
+    <!-- 旋钮模式（收音机 / 智能手机 / 老式手机） -->
+    <div class="tuning-area" id="tuning-knob-area">
+      <div class="knob-container">
+        <div class="knob-outer" id="audio-knob"><div class="knob-indicator"></div><div class="knob-dot"></div></div>
+        <div class="knob-arrow"><span id="knob-left">◀</span><span id="knob-right">▶</span></div>
+      </div>
+    </div>
+    <!-- 按键模式（老式手机） -->
+    <div class="tuning-area" id="tuning-btn-area" style="display:none;">
+      <div class="btn-tuning">
+        <button id="btn-freq-up">+</button><span style="font-size:0.9rem;color:var(--ink-light);">0.1</span><button id="btn-freq-down">−</button>
+      </div>
+    </div>
+    <!-- 数字键盘（老式手机） -->
+    <div class="tuning-area" id="tuning-keypad-area" style="display:none;flex-direction:column;align-items:center;">
+      <div style="margin-bottom:6px;padding:6px 14px;border:2px solid var(--ink);border-radius:var(--radius);background:var(--paper);font-family:var(--font-hand);font-size:1.3rem;min-width:120px;text-align:center;letter-spacing:0.1em;" id="keypad-display">—</div>
+      <div class="num-keypad" id="num-keypad">
+        <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+        <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+        <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+        <button data-key=".">.</button><button data-key="0">0</button><button data-key="clear">C</button>
+      </div>
+      <span class="btn" id="keypad-go" style="margin-top:6px;">确认</span>
+    </div>
+    <!-- 直接输入（智能手机） -->
+    <div class="tuning-area" id="freq-input-row" style="display:none;">
+      <div class="freq-input-row">
+        <input type="text" id="freq-input" placeholder="输入频率" step="0.1">
+        <span class="btn" id="freq-input-go">跳转</span>
+      </div>
+    </div>
+    <!-- 自动寻台（收音机） -->
+    <div class="tuning-area" id="auto-seek-area" style="display:none;">
+      <span class="auto-seek-btn" id="auto-seek-btn">自动寻台</span>
+    </div>
+    <!-- 播放控制 -->
+    <div class="play-controls">
+      <div class="play-btn" id="audio-play-btn">▶</div>
+      <div class="play-btn" id="audio-stop-btn">■</div>
+    </div>
+  </div>
+</div>
 
-    <footer class="site-footer">
-        <div class="container">© 2026  NQwow</div>
-    </footer>
+<!-- ==================== 笔记本电脑覆盖层 ==================== -->
+<div id="overlay-laptop" class="overlay">
+  <div class="overlay-content laptop-screen" id="laptop-screen">
+    <div class="btn-back" id="laptop-back">←</div>
+    <div class="laptop-topbar"></div>
+    <!-- 桌面 -->
+    <div class="laptop-desktop app-panel active" id="laptop-desktop">
+      <div class="desktop-icon" data-app="notes"><div class="icon-img">#</div><div class="icon-label">便签</div></div>
+      <div class="desktop-icon" data-app="sms"><div class="icon-img">@</div><div class="icon-label">短信</div></div>
+      <div class="desktop-icon" data-app="diary"><div class="icon-img">*</div><div class="icon-label">日记</div></div>
+    </div>
+    <!-- 便签 -->
+    <div class="app-panel" id="app-notes"><h3>便签</h3><div class="notes-grid" id="notes-grid"></div></div>
+    <!-- 短信 -->
+    <div class="app-panel" id="app-sms"><h3>短信</h3><div class="sms-list" id="sms-list"></div><div class="sms-star-btn" id="sms-star-btn">收藏短信</div></div>
+    <!-- 日记 -->
+    <div class="app-panel" id="app-diary">
+      <h3>日记</h3>
+      <div class="diary-lock" id="diary-lock-view">
+        <p>此日记已加密</p>
+        <input type="password" inputmode="text" autocomplete="off" id="diary-password" placeholder="请输入密码" style="width:180px;padding:8px;border:2px solid var(--ink);border-radius:var(--radius);text-align:center;font-family:var(--font-ui);margin-top:12px;">
+        <br><span class="btn" id="diary-pw-submit" style="margin-top:6px;">解锁</span>
+        <p style="margin-top:16px;"><span class="forgot-link" id="diary-forgot">忘记密码？</span></p>
+      </div>
+      <div class="diary-questions" id="diary-questions-view" style="display:none;">
+        <p style="text-align:center;margin-bottom:10px;font-weight:bold;">密保问题</p>
+        <div class="q-item"><label>1. 最喜欢的牛奶品牌？</label><input id="dq1" placeholder="输入答案"></div>
+        <div class="q-item"><label>2. 最喜欢的电台频道？</label><input id="dq2" placeholder="输入答案"></div>
+        <div class="q-item"><label>3. 丢东西那年是几岁？</label><input id="dq3" placeholder="输入答案"></div>
+        <div style="text-align:center;margin-top:6px;"><span class="btn" id="diary-q-submit">提交</span></div>
+        <p class="pw-error" id="diary-q-error" style="text-align:center;"></p>
+      </div>
+      <div id="diary-entries-view" style="display:none;">
+        <div class="diary-entries" id="diary-entries"></div>
+        <div class="diary-hint" id="diary-hint-text"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <script src="script.js"></script>
+<!-- ==================== 门解锁覆盖层 ==================== -->
+<div id="overlay-door" class="overlay">
+  <div class="overlay-content door-unlock" id="door-unlock-content">
+    <div class="btn-back" id="door-back">←</div>
+    <h3>门锁</h3>
+    <p class="unlock-step" id="door-step-text">输入第 1 个频率</p>
+    <div class="locked-freqs"><div class="locked-freq" id="lf1">—</div><div class="locked-freq" id="lf2">—</div><div class="locked-freq" id="lf3">—</div></div>
+    <div class="freq-display"><div class="freq-label">FM</div><div class="freq-value" id="door-freq-display">87.0</div></div>
+    <div class="knob-container" style="margin:0 auto;">
+      <div class="knob-outer" id="door-knob"><div class="knob-indicator"></div><div class="knob-dot"></div></div>
+      <div class="knob-arrow"><span id="door-knob-left">◀</span><span id="door-knob-right">▶</span></div>
+    </div>
+    <p class="door-error" id="door-error"></p>
+    <span class="btn" id="door-confirm" style="margin-top:6px;">确认</span>
+    <p class="unlock-hint">"用三个频率，拼成一条路。"</p>
+  </div>
+</div>
+
+<!-- ==================== 最终空间 ==================== -->
+<div id="scene-final" class="scene"><div class="final-space" id="final-click"><p>门外是纯白的光。</p><p class="click-hint">— 点击继续 —</p></div></div>
+
+<!-- ==================== 最终对话 ==================== -->
+<div id="overlay-dialogue" class="overlay">
+  <div class="overlay-content dialogue-panel" id="dialogue-panel">
+    <div class="voice-text" id="voice-text"></div>
+    <div class="options" id="dialogue-options"></div>
+  </div>
+</div>
+
+<!-- ==================== 结局 ==================== -->
+<div id="overlay-ending" class="overlay"><div class="overlay-content ending-scene" id="ending-content"></div></div>
+
+<!-- ==================== 共享收尾 ==================== -->
+<div id="overlay-epilogue" class="overlay"><div class="overlay-content epilogue-scene" id="epilogue-content"></div></div>
+
+<!-- ==================== 密码弹窗 ==================== -->
+<div class="pw-dialog" id="pw-dialog">
+  <div class="pw-box">
+    <p id="pw-title">请输入密码</p>
+    <p class="pw-hint" id="pw-hint"></p>
+    <input type="text" inputmode="text" autocomplete="off" id="pw-input" placeholder="输入密码">
+    <p class="pw-error" id="pw-error"></p>
+    <span class="btn" id="pw-submit">确认</span>
+    <span class="btn" id="pw-cancel" style="margin-left:6px;background:transparent;">取消</span>
+  </div>
+</div>
+
+<!-- ==================== 打卡弹窗 ==================== -->
+<div class="pw-dialog" id="checkin-dialog">
+  <div class="pw-box checkin-popup">
+    <p><strong>工作打卡</strong></p>
+    <p style="font-size:0.85rem;color:var(--ink-light);" id="checkin-label">请输入姓名：</p>
+    <input type="text" id="checkin-input" placeholder="姓名">
+    <p style="font-size:0.85rem;color:var(--ink-fade);" id="checkin-result"></p>
+    <span class="btn" id="checkin-submit">打卡</span>
+    <span class="btn" id="checkin-close" style="background:transparent;">关闭</span>
+  </div>
+</div>
+
+<!-- ==================== 黑屏 ==================== -->
+<div id="scene-blackout"><div id="blackout-content"><span>— 感谢游玩 —</span><br><span class="btn" id="restart-btn" style="display:none;margin-top:20px;">重新赋音</span></div></div>
+
+<script>
+/* ================================================================
+   走 马 灯 — 游戏主逻辑
+   ================================================================ */
+
+// ==================== 音频数据（含文字内容） ====================
+const AUDIO_DATA = {
+  '93': {
+    '87.6': { file:'goodmusic/93 87.6 笑话.mp3', name:'笑话', text:'戴维刚创建了自己的公司，他购买了办公家具和电话。这时，他听见有脚步声走来，他认为这是他的第一个客户，于是就赶紧拿起电话佯装生意繁忙的样子谈着"生意"，来人进来后，戴维还在滔滔不绝的谈着他的"生意"。30分钟后，戴维放下电话，来人说，我是电话局的工作人员，来接通你公司的电话线。' },
+    '88.3': { file:'goodmusic/93 88.3 旅行.mp3', name:'旅行·回声谷', text:'"各位好，我是常久久，欢迎收听今天的\'听风之旅\'。本节目由\'春光照相机\'独家赞助——留住光影，记住每一程。今天要带大家去一个特别的地方，叫回声谷。据说在那里，你对着山谷喊出一个心愿，七年之后，它会以另一种方式回到你耳边。到底是不是真的？我们不知道。但有时候，相信本身就是件佳事。节目最后送大家一句话：声音从不消失，它只是等一个对的时候，重新被人听见。"' },
+    '92.2': { file:'goodmusic/93 92.2 儿童故事.mp3', name:'儿童故事', text:'"……小王子坐在沙丘上，抬头看着满天的星星。他对飞行员说：\'你看见那些星星了吗？每一颗上都住着一个人，只是我们看不清楚。但你如果用心听，能听见他们的笑声。\'飞行员问：\'那你的星星上有什么？\'小王子说：\'有一朵花。她看不见，但她一直在那里。\'"' },
+    '93.4': { file:'goodmusic/93 93.4 创建.mp3', name:'频道创建', text:'"这里是93.4，今天，我们正式开播了。我是第一代主持人。不管这个频道能走多久，走多远，我们想做一个承诺——只要还有人愿意听，我们就一直播下去。五十年也好，一百年也好，让声音陪着你。"' },
+    '96.6': { file:'goodmusic/93 96.6 戏曲.mp3', name:'戏曲', text:'《锁麟囊》选段："……他教我收余恨、免娇嗔、且自新、改性情，休恋逝水、苦海回身、早悟兰因。"' },
+    '97.4': { file:'goodmusic/93 97.4 广告.mp3', name:'广告', text:'"您还在为家务烦恼吗？强力去污皂，一擦即净！不伤手，不伤衣，全家老小都能用。各大百货商店均有销售。强力去污皂，把干净带回家。"' },
+    '100.1':{ file:'goodmusic/93 100.1 科学知识.mp3', name:'科学知识', text:'"听众朋友，今天我们要讲一个有趣的现象：声音在空气中传播的速度大约是每秒340米。但如果一个人站在山谷里喊一声，声音撞到山壁再反射回来，耳朵就会听到两次。第一次是原声，第二次是回声。有趣的是，很多人一辈子只听见自己的原声，从没等到那声回响。"' },
+    '106.5':{ file:'goodmusic/93 106.5 新闻.mp3', name:'新闻', text:'"本台消息：市委领导近日视察城西旧街道片区，明确指出未来十年将大力推进该区域的基础设施改造与居民安置工作，力争将城西建设成为本市新的宜居示范区。相关部门已着手编制具体规划方案。"' }
+  },
+  '07': {
+    '87.6': { file:'goodmusic/07 87.6 运动解说.mp3', name:'运动解说', text:'"……好球！三号位切入！传球！投篮——进了！压哨两分！红队完成逆转！观众席整个沸腾了！这场比赛太精彩了！距离终场还有最后三十秒，蓝队叫了暂停……"' },
+    '88.3': { file:'goodmusic/07 88.3 旅行.mp3', name:'旅行·幸运听众', text:'"欢迎回到\'听风之旅\'，我是常久久。本节目由\'乐寻牛奶\'赞助播出——寻找自然，寻找健康。上期节目我们抽出了三位幸运听众，各获得乐寻牛奶一箱。恭喜：张齐伟、李寻光、季韵佳。也感谢所有参与的听众朋友。今天我们继续往南走。接下来要去的地方叫望海崖，那里的灯塔已经亮了一百多年。据说每个守塔人离开时都会留下一句话，叠起来有一整个抽屉。"' },
+    '89.1': { file:'goodmusic/07 89.1 纯音乐.mp3', name:'纯音乐', text:'二泉映月' },
+    '92.2': { file:'goodmusic/07 82.2 情感.mp3', name:'情感', text:'"……有位听众来信说，他父亲走了三年了，但他一直留着父亲的老收音机。有时候半夜睡不着，他会打开随便调一个台，就听着那种沙沙声，觉得父亲还在旁边。他说，声音是一种很奇怪的东西，你看不见它，但它能抱着你。"' },
+    '97.4': { file:'goodmusic/07 97.4 访谈.mp3', name:'人物访谈', text:'"今天来到我们演播室的是交通规划方面的张设计师。张工，听说城南绕城高速那个著名的S形弯道，在设计阶段就引起过讨论？""对。那个弯道最初提交的方案其实存在视线盲区，尤其是夜间或雨天，驾驶员在弯心位置是看不到对向来车的。后来我们在弯道外侧增设了引导式交通信号灯和反光标识，通过灯光顺序提醒来车，基本解决了这个问题。当然，还是要提醒驾驶员朋友们减速慢行，任何设计都代替不了谨慎驾驶。"' },
+    '100.1':{ file:'goodmusic/07 100.1 失物招领.mp3', name:'失物招领', text:'"下面播送一则失物招领。近日，一位热心听众在城南图书馆附近拾到一盘磁带，外壳标注有\'一九九三，回声谷\'字样，磁带上无其他标识。请失主持有效身份证明到本台传达室认领。再重复一遍……"' },
+    '106.5':{ file:'goodmusic/07 106.5 新闻.mp3', name:'新闻', text:'"本台消息：经过十年持续建设，旧城区改造工程今日圆满完成最后一批搬迁户的安置工作。相关负责人在竣工仪式上表示，本次改造惠及居民逾三万户，城西新区已成为本市宜居新地标。至此，跨度十年的城西搬迁计划画上句号。"' },
+    '106.9':{ file:'goodmusic/07 106.9 广告.mp3', name:'广告', text:'"您还在为失眠烦恼吗？清心安神口服液，纯中药制剂，无副作用。每晚一支，好梦到天亮。清心安神口服液，各大药房有售，详情请咨询热线电话……"' }
+  },
+  '26': {
+    '88.3': { file:'goodmusic/26 88.3 旅行.mp3', name:'旅行·明天', text:'"各位好，我是明天，欢迎收听\'听风之旅\'。今天的节目由\'微程旅行\'赞助播出——微程旅行，让每一程都更轻盈。今天我们去一个叫青石滩的地方。那里的海风很大，有趣的是，住在那里的人说，风会把话带去很远的地方，送给那些你送不到的人。我想，有些地方总该亲自去一趟的。青石滩的风声，我替你们先听一听。"' },
+    '89.1': { file:'goodmusic/26 89.1 点歌.mp3', name:'点歌', text:'"接下来这首歌，送给一位姓李的朋友。他说今天是他生日，而且刚刚找回了一样很重要的东西，觉得日子好像在慢慢变好了。祝他生日快乐。这首歌是《明天会更好》，送给你。"' },
+    '92.2': { file:'goodmusic/26 92.2 广告.mp3', name:'广告', text:'"亲爱的，你有多久没有好好睡一觉了？小睡眠APP，收录三千种自然白噪音，雨声、篝火声、海浪声，让你每晚沉入梦境。应用商店搜索\'小睡眠\'，下载即送七天尊享会员。"' },
+    '93.4': { file:'goodmusic/26 93.4 创建.mp3', name:'回归', text:'"93.4，我们又回来了。这些年发生了很多事。广播变少了，大家听的东西也不一样了。但不管怎么样，只要还有人愿意打开收音机，我们就在。"' },
+    '97.4': { file:'goodmusic/26 97.4 纯音乐.mp3', name:'音乐', text:'钢琴曲 《超时空辉夜姬》插曲「星降る海」BV1AhoXBwExu' },
+    '106.5':{ file:'goodmusic/26 106.5 新闻.mp3', name:'新闻', text:'"本台消息：今天是城西新区落成三十周年，相关部门在新区广场举办了纪念展览，展出了改造前后的影像资料，吸引不少市民参观。另外，今日全国大部地区天气晴好，南方多地气温回升。国际方面，亚洲基础设施投资银行近日通过新一轮绿色能源项目审批，总额达十二亿美元。接下来是一则简讯……"' },
+    '106.9':{ file:'goodmusic/26 106.9 汽车.mp3', name:'汽车频道', text:'"听众朋友们大家好，欢迎收听106.9汽车频道，我是路况播报员。目前本市整体交通状况良好。南北高架全线通行顺畅，平均车速六十公里每小时。环城东路方向车流正常。城南绕城高速南段因突发事故，目前该路段出现拥堵，请驾驶员朋友择路绕行。具体事故原因还在进一步了解中。滨江大道方向车速较缓，建议绕行。天气晴好，气温二十到二十八度，适合出行。以上就是本时段的路况信息，我们稍后再见。"' }
+  }
+};
+const STATIC_FILE = 'goodmusic/杂音.mp3';
+const FREQ_MIN = 87.0;
+const FREQ_MAX = 108.0;
+
+// ==================== 获取频道列表 ====================
+function getChannelsForYear(year) {
+  return Object.keys(AUDIO_DATA[year] || {}).sort((a,b)=>parseFloat(a)-parseFloat(b));
+}
+
+// ==================== 便签/短信/日记数据 ====================
+const NOTES_DATA = [
+  { id:1, title:'常听广播记录', locked:false, pw:'',
+    content:'87.6 笑话 / 88.3 旅行 / 89.1 音乐 / 92.2 儿童故事/情感 / 93.4 频道创建/回归 / 96.6 戏曲 / 97.4 广告/访谈/音乐 / 100.1 科学/失物招领 / 106.5 新闻 / 106.9 广告/汽车' },
+  { id:2, title:'', locked:true, pw:'回声谷', hint:'去旅行过最喜欢的地方（三个字）',
+    content:'搬家清单：1996年夏，衣服三箱、旧课本、收音机、磁带（我的回声谷！）、碗筷、父亲工具箱，新家在138号' },
+  { id:3, title:'100.1传达室路线图', locked:false, pw:'',
+    content:'手绘路线：市电台正门 → 传达室 → 100.1办公室。17路坐到"电台南门"，下车走200米' },
+  { id:4, title:'', locked:true, pw:'19850802', hint:'生日（八位）',
+    content:'市第一医院·眼科。主治：张慧敏。复诊：每周三上午。电话：555-8341。备注：先天性弱视，戴镜矫正后约0.6，建议每年复查' },
+  { id:5, title:'工作打卡地址', locked:false, pw:'', hasLink:true,
+    content:'点击链接 → 跳转至打卡页面' }
+];
+
+const SMS_DATA = [
+  { from:'10086', time:'2007-09-10 10:32', body:'尊敬的客户，您的账户余额已不足10元，请及时充值。' },
+  { from:'小王', time:'2020-03-15 17:20', body:'明晚吃饭，别迟到啊' },
+  { from:'妈妈', time:'2026-08-02 14:56', body:'刚刚有人说你出事住院了，是诈骗吧？' }
+];
+
+const FAV_SMS = [
+  { from:'爸爸', time:'2003-08-02 07:23',
+    body:'儿子，十八岁生日快乐！给你买了个新手机，插上耳机还能听广播。爸妈今天加班，晚上回来煮面。' },
+  { from:'88.3频道', time:'2007-09-15 16:02',
+    body:'李先生您好，恭喜您在88.3"听风之旅"听众抽奖中获得"乐寻牛奶"一箱。请于本月内凭本短信至电台传达室领取。' }
+];
+
+const DIARY_ENTRIES = [
+  { date:'1993年 10月6日', text:'88.3说有个地方叫回声谷。竟然就在我家附近，我让爸妈带我去，还带了磁带。我把愿望录下来了，回来的时候听着是空的，爸爸说可能是我按键按错了，当时应该仔细看看的' },
+  { date:'1994年 2月7日', text:'小王子这本书挺有意思，下周去图书馆看看有没有绘本。突然想起上次借的另一本还没还，我得马上去找找' },
+  { date:'1996年 5月10日', text:'搬家了。磁带找不到了。应该还在吧。怎么办？只有回声谷不见了' },
+  { date:'1998年 1月22日', text:'配了新眼镜，能看清黑板上的字了' },
+  { date:'2001年 4月9日', text:'第一次自己坐17路去电台。广播真好' },
+  { date:'2004年 8月3日', text:'99说乐寻牛奶好喝。名字里也有个"寻"字' },
+  { date:'2005年 5月10日', text:'都说人死之前有走马灯，能够回望这一生。我眼睛不好，不会到时候什么都看不见吧hh' },
+  { date:'2007年 11月1日', text:'100.1说有人捡到了那盘磁带。明天打电话问问' },
+  { date:'2007年 11月2日', text:'他们说已经被人领走了。' },
+  { date:'2007年 11月3日', text:'他们说已经被人领走了。。' },
+  { date:'2026年 7月30日', text:'有个客户说收藏了一盘奇怪的磁带，标签写着"回谷"，天哪，不会是我的那一盘吧，那么多年了，我又回来写日记了' },
+  { date:'2026年 8月1日', text:'他说找到了，明天去取。' },
+  { date:'2026年 8月2日', text:'今日晴朗 ^-^' }
+];
+const DIARY_HINT_TEXT = '"如果有一天我被困住，我会试着调回三个频道：第一次听见远方、错过的遗憾、和准备听见回响的时候。"';
+
+const DIARY_QUESTIONS = [
+  { q:'1. 最喜欢的牛奶品牌？', a:['乐寻牛奶','乐寻'] },
+  { q:'2. 最喜欢的电台频道？', a:['88.3'] },
+  { q:'3. 丢东西那年是几岁？', a:['11'] }
+];
+
+const DOOR_FREQS = [88.3, 100.1, 106.9];
+
+const ENDING_DIALOGUE = [
+  { voice:'你出来了。你知道我是谁吗？', opts:['你是李寻光。','你是我的回声。','我不确定。'], scores:[0,1,-1] },
+  { voice:'你听过所有的声音了。你听到了什么？', opts:['听到了一个一直在等回音的人。','听到了很多被错过的东西。','听到了一个很普通的人的一生。'], scores:[0,-1,1] },
+  { voice:'"对。我挺普通的。看不见许多东西，但耳朵还算灵。"', auto:true },
+  { voice:'"我只是想把那盘磁带拿回来。虽然它一句都没录上。"', auto:true },
+  { voice:'最后一件事。你在门里的时候，有没有对这个行为感到遗憾呢？原本寻光不应该遭受这个意外的，只是为了一个完全空白的东西', opts:['遗憾，你应该还要听更多声音的。','有的。但好像也怪不了谁。','不会。你最后那天是去取一件重要东西的，是带着期待的。'], scores:[1,0,1] },
+  { voice:'沉默良久……', auto:true },
+  { voice:'"我该走了。其实我早就不在了，你知道的。"', auto:true },
+  { voice:'"你帮我把那些声音捡起来了。谢谢。"', auto:true },
+  { voice:'"谢谢你，也谢谢我自己……"', auto:true },
+];
+
+const ENDING_DATA = {
+  good: {
+    text:'<br>李寻光生前修复了1379段声。<br>每段声音他都认真听过<br>没有声音会回头听一听他<br>但你听见了<br>这大概就是回声',
+    line:'他在磁带里喊的那句话被回声谷忘记，今天有人听见了',
+    question:'你相信被忘记的声音，总有一天会被重新听见吗？',
+    opts:['我相信','我希望如此']
+  },
+  bad: {
+    text:'<br>他一生都在给别人的声音修复、填空<br>自己的那段，始终是空白<br>回声谷欠了他一次回声',
+    line:'你可以选择不原谅回声谷，这本身也是一种回答。',
+    question:'如果有一天你的声音被遗忘了，你会希望它以另一种方式储存吗？',
+    opts:['会','不会']
+  }
+};
+
+/* ==================== 游戏状态 ==================== */
+const State = {
+  currentYear: '93',
+  currentFreq: 88.3,
+  audioDevice: 'radio',
+  currentAudio: null,
+  isPlaying: false,
+  isSeeking: false,        // 自动寻台状态
+  seekTimer: null,
+  keypadBuffer: '',        // 老式手机数字键盘缓冲区
+  diaryUnlocked: false,
+  diaryHintSeen: false,
+  smsUnlocked: false,      // 收藏短信持久化
+  unlockedNotes: new Set(), // 已解锁便签ID
+  checkinDone: false,      // 打卡是否完成
+  bgmPlaying: false,
+  doorStep: 0,
+  doorLocked: [false,false,false],
+  dialogueScore: 0,
+  dialogueStep: 0,
+  endingType: null
+};
+
+/* ==================== DOM引用 ==================== */
+const $ = id => document.getElementById(id);
+const dom = {
+  opening: $('scene-opening'), room: $('scene-room'), final: $('scene-final'), blackout: $('scene-blackout'),
+  audio: $('overlay-audio'), laptop: $('overlay-laptop'), door: $('overlay-door'),
+  dialogue: $('overlay-dialogue'), ending: $('overlay-ending'), epilogue: $('overlay-epilogue'),
+  pwDialog: $('pw-dialog'), pwTitle: $('pw-title'), pwHint: $('pw-hint'), pwInput: $('pw-input'), pwError: $('pw-error'),
+  checkinDialog: $('checkin-dialog'), checkinInput: $('checkin-input'), checkinResult: $('checkin-result')
+};
+
+/* ==================== 场景管理 ==================== */
+function hideAllScenes() { document.querySelectorAll('.scene.active').forEach(s=>s.classList.remove('active')); }
+function hideAllOverlays() { document.querySelectorAll('.overlay.active').forEach(o=>o.classList.remove('active')); }
+function showScene(sceneEl) { hideAllScenes(); hideAllOverlays(); sceneEl.classList.add('active'); }
+function showOverlay(overlayEl) { overlayEl.classList.add('active'); }
+function closeOverlay(overlayEl) { overlayEl.classList.remove('active'); }
+
+/* ==================== Blob URL 辅助（移动端兼容） ==================== */
+function toBlobURL(dataURI) {
+  if (!dataURI.startsWith('data:')) return dataURI;
+  const [head, b64] = dataURI.split(',');
+  const mime = (head.split(':')[1] || 'audio/mpeg').split(';')[0];
+  const raw = atob(b64);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return URL.createObjectURL(new Blob([bytes], { type: mime }));
+}
+
+/* ==================== 音频引擎 ==================== */
+const AudioEngine = {
+  audioEl: null,
+  blobCache: {},
+  debounceTimer: null,
+
+  init() {
+    this.audioEl = new Audio();
+    this.audioEl.preload = 'auto';
+  },
+
+  getChannelInfo(year, freq) {
+    const f = freq.toFixed(1);
+    const map = AUDIO_DATA[year];
+    return map ? (map[f] || null) : null;
+  },
+
+  resolveURL(path) {
+    if (!path.startsWith('data:')) return path;
+    if (!this.blobCache[path]) {
+      this.blobCache[path] = toBlobURL(path);
+    }
+    return this.blobCache[path];
+  },
+
+  playFreq(year, freq) {
+    if (this.audioEl) { this.audioEl.pause(); this.audioEl.currentTime = 0; }
+    const info = this.getChannelInfo(year, freq);
+    const isStatic = !info;
+    this.audioEl.src = this.resolveURL(isStatic ? STATIC_FILE : info.file);
+    this.audioEl.loop = isStatic;  // 杂音循环播放
+    this.audioEl.play().catch(()=>{});
+    State.isPlaying = true;
+    return { info, isStatic };
+  },
+
+  stop() {
+    if (this.audioEl) { this.audioEl.pause(); this.audioEl.currentTime = 0; }
+    State.isPlaying = false;
+    this.audioEl.loop = false;
+  },
+
+  debouncedPlay(year, freq, callback) {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      const result = this.playFreq(year, freq);
+      if (callback) callback(result);
+      updatePlayButton();
+    }, 280);
+  }
+};
+
+/* ==================== 更新播放按钮和状态 ==================== */
+function updatePlayButton() {
+  $('audio-play-btn').textContent = State.isPlaying ? '⏸' : '▶';
+}
+
+function updateAudioDisplay(result) {
+  const statusEl = $('audio-status');
+  const textBox = $('audio-text-box');
+  const textContent = $('audio-text-content');
+  if (!result) {
+    statusEl.textContent = '—';
+    textContent.textContent = '—';
+    return;
+  }
+  if (result.isStatic) {
+    statusEl.textContent = '无信号 — 杂音';
+    statusEl.style.color = 'var(--ink-fade)';
+    textContent.textContent = '（杂音……没有信号）';
+  } else {
+    statusEl.textContent = '正在播放：' + result.info.name;
+    statusEl.style.color = 'var(--ink)';
+    textContent.textContent = result.info.text || '—';
+  }
+}
+
+/* ==================== 频率吸附 ==================== */
+function snapToNearestChannel(year, freq) {
+  const channels = getChannelsForYear(year);
+  if (channels.length === 0) return freq;
+  let nearest = freq;
+  let minDist = Infinity;
+  for (const ch of channels) {
+    const chf = parseFloat(ch);
+    const dist = Math.abs(freq - chf);
+    if (dist < minDist) { minDist = dist; nearest = chf; }
+  }
+  // 在 0.08 范围内自动吸附
+  return minDist <= 0.08 ? nearest : freq;
+}
+
+/* ==================== 自动寻台 ==================== */
+function toggleAutoSeek() {
+  if (State.isSeeking) {
+    stopAutoSeek();
+    return;
+  }
+  startAutoSeek();
+}
+
+function startAutoSeek() {
+  State.isSeeking = true;
+  $('auto-seek-btn').textContent = '搜索中...';
+  $('auto-seek-btn').classList.add('seeking');
+  doSeekStep();
+}
+
+function stopAutoSeek() {
+  State.isSeeking = false;
+  if (State.seekTimer) clearTimeout(State.seekTimer);
+  $('auto-seek-btn').textContent = '自动寻台';
+  $('auto-seek-btn').classList.remove('seeking');
+}
+
+function doSeekStep() {
+  if (!State.isSeeking) return;
+  // 增加频率
+  let nextFreq = State.currentFreq + 0.1;
+  if (nextFreq > FREQ_MAX) nextFreq = FREQ_MIN;
+  State.currentFreq = nextFreq;
+  audioKnob.setFreq(nextFreq);
+
+  const info = AudioEngine.getChannelInfo(State.currentYear, nextFreq);
+  if (info) {
+    // 找到了！停止搜索并播放
+    stopAutoSeek();
+    const result = AudioEngine.playFreq(State.currentYear, nextFreq);
+    updateAudioDisplay(result);
+    updatePlayButton();
+  } else {
+    State.seekTimer = setTimeout(() => doSeekStep(), 120);
+  }
+}
+
+/* ==================== 旋钮组件 ==================== */
+class KnobController {
+  constructor(knobEl, freqDisplayEl, onChangeCallback) {
+    this.knob = knobEl;
+    this.freqDisplay = freqDisplayEl;
+    this.onChange = onChangeCallback;
+    this.freq = 88.3;
+    this.isDragging = false;
+    this.startAngle = 0;
+    this.startFreq = 0;
+    this.bindEvents();
+  }
+
+  setFreq(f) {
+    this.freq = Math.max(FREQ_MIN, Math.min(FREQ_MAX, Math.round(f*10)/10));
+    this.updateKnobVisual();
+    if (this.freqDisplay) this.freqDisplay.textContent = this.freq.toFixed(1);
+  }
+
+  freqToAngle(f) {
+    const minA = -135, maxA = 135;
+    return minA + ((f - FREQ_MIN) / (FREQ_MAX - FREQ_MIN)) * (maxA - minA);
+  }
+
+  updateKnobVisual() {
+    this.knob.style.transform = `rotate(${this.freqToAngle(this.freq)}deg)`;
+  }
+
+  getAngleFromEvent(e) {
+    const rect = this.knob.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const px = e.touches ? e.touches[0].clientX : e.clientX;
+    const py = e.touches ? e.touches[0].clientY : e.clientY;
+    return Math.atan2(py - cy, px - cx) * 180 / Math.PI;
+  }
+
+  bindEvents() {
+    const start = (e) => {
+      e.preventDefault();
+      stopAutoSeek();
+      this.isDragging = true;
+      this.startAngle = this.getAngleFromEvent(e);
+      this.startFreq = this.freq;
+    };
+    const move = (e) => {
+      if (!this.isDragging) return;
+      let delta = this.getAngleFromEvent(e) - this.startAngle;
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+      const newFreq = this.startFreq + (delta / 270) * (FREQ_MAX - FREQ_MIN);
+      this.setFreq(newFreq);
+      if (this.onChange) this.onChange(this.freq);
+    };
+    const end = () => { this.isDragging = false; };
+    this.knob.addEventListener('mousedown', start);
+    this.knob.addEventListener('touchstart', start, {passive:false});
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move, {passive:false});
+    window.addEventListener('mouseup', end);
+    window.addEventListener('touchend', end);
+  }
+
+  nudge(delta) {
+    stopAutoSeek();
+    this.setFreq(this.freq + delta);
+    if (this.onChange) this.onChange(this.freq);
+  }
+}
+
+let audioKnob, doorKnob;
+
+function initKnobs() {
+  audioKnob = new KnobController($('audio-knob'), $('audio-freq-display'), (freq) => {
+    State.currentFreq = freq;
+    AudioEngine.debouncedPlay(State.currentYear, freq, (result) => {
+      updateAudioDisplay(result);
+    });
+  });
+  doorKnob = new KnobController($('door-knob'), $('door-freq-display'), (freq) => {});
+}
+
+/* ==================== 根据年代更新调频UI ==================== */
+function updateTuningUI(year) {
+  // 93→radio, 07→oldphone, 26→smartphone
+  const isRadio = (year === '93');
+  const isOldPhone = (year === '07');
+  const isSmartPhone = (year === '26');
+
+  $('tuning-knob-area').style.display = (isRadio || isOldPhone || isSmartPhone) ? 'flex' : 'none';
+  $('tuning-btn-area').style.display = 'none';
+  $('tuning-keypad-area').style.display = isOldPhone ? 'flex' : 'none';
+  $('freq-input-row').style.display = isSmartPhone ? 'flex' : 'none';
+  $('auto-seek-area').style.display = 'flex'; // 所有设备都有自动寻台
+  $('keypad-display').style.display = isOldPhone ? 'inline-block' : 'none';
+}
+
+/* ==================== 音频界面 ==================== */
+function openAudioPlayer(device, defaultYear) {
+  State.audioDevice = device;
+  State.currentYear = defaultYear;
+  State.keypadBuffer = '';
+  $('keypad-display').textContent = '—';
+  stopAutoSeek();
+
+  // 更新年代标签
+  document.querySelectorAll('#overlay-audio .audio-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.year === defaultYear);
+  });
+
+  updateTuningUI(defaultYear);
+
+  // 初始频率：第一个可用频道（不中断当前播放）
+  const channels = getChannelsForYear(defaultYear);
+  State.currentFreq = channels.length > 0 ? parseFloat(channels[0]) : 88.3;
+  audioKnob.setFreq(State.currentFreq);
+  $('audio-freq-display').textContent = State.currentFreq.toFixed(1);
+  $('audio-status').textContent = State.isPlaying ? '播放中' : '—';
+  $('audio-text-content').textContent = '—';
+  updatePlayButton();
+
+  showOverlay(dom.audio);
+}
+
+function closeAudioPlayer() {
+  stopAutoSeek();
+  clearTimeout(AudioEngine.debounceTimer);
+  // 不停止音频：关闭UI后继续后台播放
+  closeOverlay(dom.audio);
+}
+
+// 返回按钮
+$('audio-back').addEventListener('click', closeAudioPlayer);
+
+// 年代标签切换
+document.querySelectorAll('#overlay-audio .audio-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const year = tab.dataset.year;
+    document.querySelectorAll('#overlay-audio .audio-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    State.currentYear = year;
+    State.keypadBuffer = '';
+    $('keypad-display').textContent = '—';
+    stopAutoSeek();
+    updateTuningUI(year);
+    const channels = getChannelsForYear(year);
+    State.currentFreq = channels.length > 0 ? parseFloat(channels[0]) : 88.3;
+    audioKnob.setFreq(State.currentFreq);
+    // 不停止音频，只更新UI显示
+    $('audio-freq-display').textContent = State.currentFreq.toFixed(1);
+    $('audio-status').textContent = '—';
+    $('audio-text-content').textContent = '—';
+    updatePlayButton();
+  });
+});
+
+// 旋钮箭头
+$('knob-left').addEventListener('click', ()=>{ audioKnob.nudge(-0.1); triggerAudioPlay(); });
+$('knob-right').addEventListener('click', ()=>{ audioKnob.nudge(0.1); triggerAudioPlay(); });
+
+function triggerAudioPlay() {
+  State.currentFreq = audioKnob.freq;
+  AudioEngine.debouncedPlay(State.currentYear, audioKnob.freq, (result) => {
+    updateAudioDisplay(result);
+  });
+}
+
+// 按键加减（老式手机）— 已废弃，改用旋钮
+$('btn-freq-up').addEventListener('click', ()=>{ audioKnob.nudge(0.1); triggerAudioPlay(); });
+$('btn-freq-down').addEventListener('click', ()=>{ audioKnob.nudge(-0.1); triggerAudioPlay(); });
+
+// 数字键盘（老式手机）
+document.querySelectorAll('#num-keypad button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.key;
+    if (key === 'clear') {
+      State.keypadBuffer = '';
+    } else if (key === '.') {
+      if (!State.keypadBuffer.includes('.')) State.keypadBuffer += '.';
+    } else {
+      if (State.keypadBuffer.length < 5) State.keypadBuffer += key;
+    }
+    // 更新按键显示框
+    $('keypad-display').textContent = State.keypadBuffer || '—';
+    // 实时更新频率
+    if (State.keypadBuffer) {
+      const val = parseFloat(State.keypadBuffer);
+      if (!isNaN(val) && val >= FREQ_MIN && val <= FREQ_MAX) {
+        State.currentFreq = val;
+        audioKnob.setFreq(val);
+      }
+    }
+  });
+});
+$('keypad-go').addEventListener('click', ()=>{
+  const val = parseFloat(State.keypadBuffer);
+  if (!isNaN(val) && val >= FREQ_MIN && val <= FREQ_MAX) {
+    State.currentFreq = val;
+    audioKnob.setFreq(val);
+    const result = AudioEngine.playFreq(State.currentYear, val);
+    updateAudioDisplay(result);
+    updatePlayButton();
+    State.keypadBuffer = '';
+    $('keypad-display').textContent = '—';
+  }
+});
+
+// 直接输入（智能手机）
+$('freq-input-go').addEventListener('click', ()=>{
+  const val = parseFloat($('freq-input').value);
+  if (!isNaN(val) && val >= FREQ_MIN && val <= FREQ_MAX) {
+    const snapped = snapToNearestChannel(State.currentYear, val);
+    State.currentFreq = snapped;
+    audioKnob.setFreq(snapped);
+    $('freq-input').value = '';
+    const result = AudioEngine.playFreq(State.currentYear, snapped);
+    updateAudioDisplay(result);
+    updatePlayButton();
+  }
+});
+
+// 自动寻台
+$('auto-seek-btn').addEventListener('click', toggleAutoSeek);
+
+// 播放/暂停/停止
+$('audio-play-btn').addEventListener('click', ()=>{
+  if (State.isPlaying) {
+    AudioEngine.stop();
+    $('audio-play-btn').textContent = '▶';
+    $('audio-status').textContent = '—';
+  } else {
+    const snapped = snapToNearestChannel(State.currentYear, State.currentFreq);
+    State.currentFreq = snapped;
+    audioKnob.setFreq(snapped);
+    const result = AudioEngine.playFreq(State.currentYear, snapped);
+    updateAudioDisplay(result);
+    updatePlayButton();
+  }
+});
+$('audio-stop-btn').addEventListener('click', ()=>{
+  AudioEngine.stop();
+  $('audio-play-btn').textContent = '▶';
+  $('audio-status').textContent = '—';
+});
+
+/* ==================== 笔记本电脑 ==================== */
+let laptopAppStack = ['desktop'];
+
+function openLaptop() {
+  laptopAppStack = ['desktop'];
+  showLaptopApp('desktop');
+  showOverlay(dom.laptop);
+}
+
+function closeLaptop() {
+  closeOverlay(dom.laptop);
+  laptopAppStack = ['desktop'];
+}
+
+function showLaptopApp(appName) {
+  document.querySelectorAll('#laptop-screen .app-panel').forEach(p=>p.classList.remove('active'));
+  const panelMap = { 'desktop':'laptop-desktop', 'notes':'app-notes', 'sms':'app-sms', 'diary':'app-diary' };
+  const panel = $(panelMap[appName]);
+  if (panel) panel.classList.add('active');
+  // 桌面时隐藏返回键，子应用时显示
+  $('laptop-back').style.visibility = 'visible';
+}
+
+$('laptop-back').addEventListener('click', ()=>{
+  if (laptopAppStack.length > 1) {
+    laptopAppStack.pop();
+    showLaptopApp(laptopAppStack[laptopAppStack.length-1]);
+  } else {
+    closeLaptop();
+  }
+});
+
+$('laptop-desktop').addEventListener('click', (e)=>{
+  const icon = e.target.closest('.desktop-icon');
+  if (!icon) return;
+  const app = icon.dataset.app;
+  laptopAppStack.push(app);
+  showLaptopApp(app);
+  if (app === 'notes') buildNotesList();
+  if (app === 'sms') buildSMSList();
+  if (app === 'diary') buildDiaryView();
+});
+
+// ===== 便签 =====
+let currentNoteTarget = null;
+
+function buildNotesList() {
+  const grid = $('notes-grid');
+  grid.innerHTML = NOTES_DATA.map(n=>`
+    <div class="note-card${n.locked?' locked':''}" data-note-id="${n.id}">
+      <div class="note-title">${n.title||'（无标题）'}</div>
+      <div class="note-preview">${n.locked?(State.unlockedNotes.has(n.id)?'已解锁（点击查看）':'私密便签（点击解锁）'):n.content.substring(0,28)+'…'}</div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.note-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      const id = parseInt(card.dataset.noteId);
+      const note = NOTES_DATA.find(n=>n.id===id);
+      if (!note) return;
+      if (note.locked && !State.unlockedNotes.has(note.id)) {
+        currentNoteTarget = note;
+        showPwDialog('请输入便签密码', note.hint||'', (pw)=>{
+          if (pw === note.pw) { hidePwDialog(); State.unlockedNotes.add(note.id); showNoteContent(note); }
+          else { dom.pwError.textContent = '密码错误'; }
+        });
+      } else if (note.locked && State.unlockedNotes.has(note.id)) {
+        showNoteContent(note);
+      } else if (note.hasLink) {
+        if (State.checkinDone) { showCheckinResult(); }
+        else { showCheckinDialog(); }
+      } else {
+        showNoteContent(note);
+      }
+    });
+  });
+}
+
+function showNoteContent(note) {
+  const grid = $('notes-grid');
+  grid.innerHTML = `
+    <div style="grid-column:1/-1;padding:12px;line-height:1.8;">
+      <span class="btn" id="note-back" style="margin-bottom:10px;">← 返回列表</span>
+      <h4>${note.title||'（无标题）'}</h4>
+      <p style="margin-top:6px;white-space:pre-wrap;">${note.content}</p>
+    </div>`;
+  $('note-back').addEventListener('click', buildNotesList);
+}
+
+function showCheckinDialog() {
+  dom.checkinInput.style.display = '';
+  $('checkin-submit').style.display = '';
+  $('checkin-label').textContent = '请输入姓名：';
+  dom.checkinInput.value = '';
+  dom.checkinResult.textContent = '';
+  dom.checkinDialog.classList.add('active');
+}
+function showCheckinResult() {
+  dom.checkinInput.style.display = 'none';
+  $('checkin-submit').style.display = 'none';
+  $('checkin-label').textContent = '李寻光';
+  dom.checkinResult.textContent = '欢迎回来，本月累计修复2段音频，从业至今共1379段';
+  dom.checkinDialog.classList.add('active');
+}
+$('checkin-submit').addEventListener('click',()=>{
+  var ok = dom.checkinInput.value.trim() === '李寻光';
+  dom.checkinResult.textContent = ok ? '欢迎回来，本月累计修复2段音频，从业至今共1379段' : '未找到该员工信息';
+  if (ok) { State.checkinDone = true; dom.checkinInput.style.display = 'none'; $('checkin-submit').style.display = 'none'; $('checkin-label').textContent = '李寻光'; }
+});
+$('checkin-close').addEventListener('click',()=>{
+  dom.checkinDialog.classList.remove('active');
+  dom.checkinInput.style.display = '';
+  $('checkin-submit').style.display = '';
+  $('checkin-label').textContent = '请输入姓名：';
+});
+
+// ===== 短信 =====
+function buildSMSList() {
+  const list = $('sms-list');
+  list.innerHTML = SMS_DATA.map(s=>`
+    <div class="sms-item">
+      <div class="sms-from">${s.from}</div>
+      <div class="sms-time">${s.time}</div>
+      <div class="sms-body">${s.body}</div>
+    </div>
+  `).join('');
+  if (State.smsUnlocked) {
+    appendFavSMS(list);
+    $('sms-star-btn').style.display = 'none';
+  } else {
+    $('sms-star-btn').style.display = 'inline-block';
+  }
+}
+
+function appendFavSMS(list) {
+  list.innerHTML += `
+    <div style="margin-top:10px;padding-top:8px;border-top:2px solid var(--ink);"><strong>收藏短信</strong></div>
+    ${FAV_SMS.map(s=>`
+      <div class="sms-item" style="background:rgba(200,180,150,0.1);border-left-color:var(--ink);">
+        <div class="sms-from">${s.from}</div>
+        <div class="sms-time">${s.time}</div>
+        <div class="sms-body">${s.body}</div>
+      </div>
+    `).join('')}`;
+}
+
+$('sms-star-btn').addEventListener('click',()=>{
+  showPwDialog('收藏短信已加密，请输入密码', '老家地址号', (pw)=>{
+    if (pw === '138') {
+      hidePwDialog();
+      State.smsUnlocked = true;
+      const list = $('sms-list');
+      appendFavSMS(list);
+      $('sms-star-btn').style.display = 'none';
+    } else {
+      dom.pwError.textContent = '密码错误';
+    }
+  });
+});
+
+// ===== 日记 =====
+function buildDiaryView() {
+  if (State.diaryUnlocked) { showDiaryEntries(); }
+  else {
+    $('diary-lock-view').style.display = 'block';
+    $('diary-questions-view').style.display = 'none';
+    $('diary-entries-view').style.display = 'none';
+    var pwEl = $('diary-password');
+    if (pwEl) pwEl.value = '';
+  }
+}
+
+$('diary-pw-submit').addEventListener('click', ()=>{
+  alert('密码错误');
+});
+
+$('diary-forgot').addEventListener('click',()=>{
+  $('diary-lock-view').style.display = 'none';
+  $('diary-questions-view').style.display = 'block';
+  document.querySelectorAll('#diary-questions-view input').forEach(i=>i.value='');
+  $('diary-q-error').textContent = '';
+});
+
+$('diary-q-submit').addEventListener('click',()=>{
+  const answers = [($('dq1').value||'').trim(), ($('dq2').value||'').trim(), ($('dq3').value||'').trim()];
+  let correct = 0;
+  for (let i=0; i<3; i++) {
+    if (DIARY_QUESTIONS[i].a.some(valid => answers[i] === valid)) correct++;
+  }
+  if (correct === 3) { unlockDiary(); }
+  else { $('diary-q-error').textContent = `只答对了 ${correct}/3 题。提示：线索在便签、短信和音频中。`; }
+});
+
+function unlockDiary() {
+  State.diaryUnlocked = true;
+  $('diary-lock-view').style.display = 'none';
+  $('diary-questions-view').style.display = 'none';
+  showDiaryEntries();
+  updateDoorState();
+}
+
+function showDiaryEntries() {
+  $('diary-entries-view').style.display = 'block';
+  $('diary-lock-view').style.display = 'none';
+  $('diary-questions-view').style.display = 'none';
+  const entriesEl = $('diary-entries');
+  entriesEl.innerHTML = DIARY_ENTRIES.map(e=>`
+    <div class="diary-entry"><span class="entry-date">${e.date}</span><br>${e.text}</div>
+  `).join('');
+  setTimeout(()=>{ entriesEl.scrollTop = entriesEl.scrollHeight; }, 100);
+  const hintEl = $('diary-hint-text');
+  hintEl.textContent = DIARY_HINT_TEXT;
+  const observer = new IntersectionObserver((entries)=>{
+    if (entries[0].isIntersecting) { State.diaryHintSeen = true; updateDoorState(); observer.disconnect(); }
+  });
+  observer.observe(hintEl);
+}
+
+function updateDoorState() {
+  if (State.diaryUnlocked && State.diaryHintSeen) {
+    $('obj-door').classList.add('door-ready');
+  }
+}
+
+/* ==================== 门解锁 ==================== */
+function openDoorUnlock() {
+  if (!State.diaryUnlocked || !State.diaryHintSeen) {
+    alert('门锁着。你需要在笔记本电脑的日记里找到出去的线索。');
+    return;
+  }
+  // 开门时停止所有音频
+  AudioEngine.stop();
+  State.isPlaying = false;
+  updatePlayButton();
+  State.doorStep = 0;
+  State.doorLocked = [false,false,false];
+  updateDoorUI();
+  doorKnob.setFreq(87.0);
+  showOverlay(dom.door);
+}
+
+function updateDoorUI() {
+  $('door-step-text').textContent = State.doorStep < 3 ? `输入第 ${State.doorStep+1} 个频率` : '全部解锁！';
+  $('door-error').textContent = '';
+  for (let i=0; i<3; i++) {
+    const el = $('lf'+(i+1));
+    el.textContent = State.doorLocked[i] ? DOOR_FREQS[i].toFixed(1) : '—';
+    el.classList.toggle('filled', State.doorLocked[i]);
+  }
+}
+
+$('door-confirm').addEventListener('click',()=>{
+  if (State.doorStep >= 3) return;
+  const target = DOOR_FREQS[State.doorStep];
+  const current = parseFloat(doorKnob.freq.toFixed(1));
+  if (current === target) {
+    State.doorLocked[State.doorStep] = true;
+    State.doorStep++;
+    updateDoorUI();
+    if (State.doorStep >= 3) {
+      playBGM();
+      setTimeout(()=>{ closeOverlay(dom.door); showScene(dom.final); }, 800);
+    }
+  } else {
+    $('door-error').textContent = '这不是要找的那个频率';
+    setTimeout(()=>{ $('door-error').textContent = ''; }, 2000);
+  }
+});
+$('door-back').addEventListener('click',()=>{ closeOverlay(dom.door); });
+$('door-knob-left').addEventListener('click',()=>{ doorKnob.nudge(-0.1); });
+$('door-knob-right').addEventListener('click',()=>{ doorKnob.nudge(0.1); });
+
+/* ==================== 最终空间 ==================== */
+$('final-click').addEventListener('click', startFinalDialogue);
+
+/* ==================== 最终对话 ==================== */
+function startFinalDialogue() {
+  State.dialogueStep = 0;
+  State.dialogueScore = 0;
+  showDialogueStep(0);
+  showOverlay(dom.dialogue);
+}
+
+function showDialogueStep(step) {
+  if (step >= ENDING_DIALOGUE.length) { closeOverlay(dom.dialogue); showEnding(); return; }
+  const d = ENDING_DIALOGUE[step];
+  $('voice-text').textContent = d.voice; // auto步骤不带引号包裹
+  if (!d.auto) { $('voice-text').textContent = `"${d.voice}"`; }
+  const optsEl = $('dialogue-options');
+  if (d.auto) {
+    // 自动推进：点击任意位置继续
+    optsEl.innerHTML = '<div class="option-btn" style="text-align:center;">— 点击继续 —</div>';
+    optsEl.querySelector('.option-btn').addEventListener('click',()=>{
+      State.dialogueStep++;
+      showDialogueStep(State.dialogueStep);
+    });
+  } else {
+    optsEl.innerHTML = d.opts.map((opt,i)=>`<div class="option-btn" data-idx="${i}">${String.fromCharCode(0x2460+i)} ${opt}</div>`).join('');
+    optsEl.querySelectorAll('.option-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const idx = parseInt(btn.dataset.idx);
+        State.dialogueScore += d.scores[idx];
+        State.dialogueStep++;
+        showDialogueStep(State.dialogueStep);
+      });
+    });
+  }
+}
+
+/* ==================== 结局 ==================== */
+function showEnding() {
+  State.endingType = State.dialogueScore >= 0 ? 'good' : 'bad';
+  const data = ENDING_DATA[State.endingType];
+  const content = $('ending-content');
+  content.innerHTML = `
+    <div class="ending-text">${data.text}</div>
+    <div class="ending-line">${data.line}</div>
+    <div class="ending-question">${data.question}</div>
+    <div class="ending-options">${data.opts.map((o,i)=>`<span class="btn ending-opt-btn" data-idx="${i}">${o}</span>`).join('')}</div>
+  `;
+  showOverlay(dom.ending);
+  content.querySelectorAll('.ending-opt-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{ closeOverlay(dom.ending); showEpilogue(); });
+  });
+}
+
+/* ==================== 共享收尾 ==================== */
+function showEpilogue() {
+  const content = $('epilogue-content');
+  content.innerHTML = `
+    <div class="epi-freq">FM 89.1</div>
+    <div class="epi-text">
+      "都说人死之前有走马灯，能够回望这一生。我眼睛不好，但意外的耳朵还不错。"<br><br>
+      回声谷或许没有回声。但有人一直在等待。<br>
+      我失信了，没能给你回应，那请自己给自己一个完美的回响吧<br>
+      这就是为什么你会出现在这里<br>
+    </div>
+    <div class="ending-question" style="margin-top:16px;">你有没有一首歌，想点给一个收不到的人？</div>
+    <div class="ending-options">
+      <span class="btn epi-opt-btn" data-choice="has">有</span>
+      <span class="btn epi-opt-btn" data-choice="none">没有，但我想点一首了</span>
+    </div>
+  `;
+  showOverlay(dom.epilogue);
+  content.querySelectorAll('.epi-opt-btn').forEach(btn=>{
+    btn.addEventListener('click', showSongChoice);
+  });
+}
+
+function showSongChoice() {
+  const content = $('epilogue-content');
+  content.innerHTML = `
+    <p style="font-size:1.1rem;margin-bottom:10px;">"你要点什么歌曲呢？"</p>
+    <div class="song-choice" id="song-final">《明天会更好》</div>
+  `;
+  $('song-final').addEventListener('click',()=>{
+    closeOverlay(dom.epilogue);
+    showFinalBlackout();
+  });
+}
+
+var bgmAudio = null;
+function playBGM() {
+  if (!bgmAudio) { bgmAudio = new Audio(toBlobURL('goodmusic/bgm.mp3')); bgmAudio.loop = true; }
+  bgmAudio.play().catch(function(){});
+  State.bgmPlaying = true;
+}
+function stopBGM() {
+  if (bgmAudio) { bgmAudio.pause(); bgmAudio.currentTime = 0; }
+  State.bgmPlaying = false;
+}
+
+function showFinalBlackout() {
+  hideAllScenes(); hideAllOverlays();
+  $('restart-btn').style.display = 'none';
+  dom.blackout.style.display = 'flex';
+  dom.blackout.style.opacity = '0';
+  dom.blackout.style.transition = 'opacity 2s ease';
+  requestAnimationFrame(function(){ dom.blackout.style.opacity = '1'; });
+  setTimeout(function(){
+    $('restart-btn').style.display = 'inline-block';
+  }, 3500);
+}
+
+function resetGame() {
+  AudioEngine.stop();
+  stopBGM();
+  State.currentYear = '93';
+  State.currentFreq = 88.3;
+  State.audioDevice = 'radio';
+  State.isPlaying = false;
+  State.isSeeking = false;
+  State.keypadBuffer = '';
+  State.diaryUnlocked = false;
+  State.diaryHintSeen = false;
+  State.smsUnlocked = false;
+  State.unlockedNotes = new Set();
+  State.checkinDone = false;
+  State.doorStep = 0;
+  State.doorLocked = [false,false,false];
+  State.dialogueScore = 0;
+  State.dialogueStep = 0;
+  State.endingType = null;
+  $('obj-door').classList.remove('door-ready');
+  dom.blackout.style.display = 'none';
+  showScene(dom.opening);
+}
+
+$('restart-btn').addEventListener('click', resetGame);
+
+/* ==================== 密码弹窗 ==================== */
+let pwCallback = null;
+function showPwDialog(title, hint, cb) {
+  dom.pwTitle.textContent = title;
+  dom.pwHint.textContent = hint || '';
+  dom.pwInput.value = '';
+  dom.pwError.textContent = '';
+  pwCallback = cb;
+  dom.pwDialog.classList.add('active');
+  setTimeout(()=>dom.pwInput.focus(), 100);
+}
+function hidePwDialog() { dom.pwDialog.classList.remove('active'); pwCallback = null; }
+$('pw-submit').addEventListener('click',()=>{ if (pwCallback) pwCallback(dom.pwInput.value); });
+$('pw-cancel').addEventListener('click', hidePwDialog);
+$('pw-input').addEventListener('keydown',(e)=>{ if (e.key==='Enter' && pwCallback) pwCallback(dom.pwInput.value); });
+
+/* ==================== 房间物件点击 ==================== */
+document.querySelectorAll('#scene-room .room-object').forEach(obj=>{
+  obj.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    switch(obj.dataset.object) {
+      case 'radio': openAudioPlayer('radio','93'); break;
+      case 'oldphone': openAudioPlayer('oldphone','07'); break;
+      case 'smartphone': openAudioPlayer('smartphone','26'); break;
+      case 'laptop': openLaptop(); break;
+      case 'door': openDoorUnlock(); break;
+    }
+  });
+});
+
+/* ==================== 开场 → 免责声明 → 房间 ==================== */
+$('scene-opening').addEventListener('click',()=>{ showScene($('scene-disclaimer')); });
+$('scene-disclaimer').addEventListener('click',()=>{ showScene(dom.room); });
+
+/* ==================== 初始化 ==================== */
+function init() {
+  AudioEngine.init();
+  initKnobs();
+}
+init();
+console.log('《走马寻光》—— 已就绪。戴上耳机体验更佳。');
+</script>
 </body>
 </html>
